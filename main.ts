@@ -41,12 +41,45 @@ const html = `
     #start-menu button:hover {
       background: #a00;
     }
+    /* Game Over Overlay Styles */
+    #gameover-menu {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(20,20,40,0.97);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 20;
+    }
+    #gameover-menu h1 {
+      color: #39f;
+      font-size: 3rem;
+      margin-bottom: 1.5rem;
+    }
+    #gameover-menu button {
+      font-size: 1.5rem;
+      padding: 0.75em 2em;
+      border: none;
+      border-radius: 8px;
+      background: #800000;
+      color: #fff;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    #gameover-menu button:hover {
+      background: #a00;
+    }
   </style>
 </head>
 <body>
   <div id="start-menu">
     <h1>Deno Doom Minimal</h1>
     <button id="start-btn">Start Game</button>
+  </div>
+  <div id="gameover-menu" style="display:none;">
+    <h1 style="color:#39f; font-size:3rem; margin-bottom:1.5rem;">Game Over</h1>
+    <button id="retry-btn" style="font-size:1.5rem; padding:0.75em 2em; border:none; border-radius:8px; background:#800000; color:#fff; cursor:pointer;">Try Again</button>
   </div>
   <canvas id="game" width="1200" height="800" style="display:none;"></canvas>
   <script type="module">
@@ -63,14 +96,35 @@ const html = `
     );
     const TILE = 40;
 
+    // --- Enemy State ---
+    let enemies = [];
+    function randomEmptyPosition() {
+      let x, y;
+      do {
+        x = Math.floor(Math.random() * (MAP_W - 2)) + 1;
+        y = Math.floor(Math.random() * (MAP_H - 2)) + 1;
+      } while (map[y][x] !== 0 || (Math.abs(x-1.5)<2 && Math.abs(y-1.5)<2));
+      return { x: x + 0.5, y: y + 0.5 };
+    }
+    function spawnEnemies() {
+      const count = Math.floor(Math.random() * 11) + 5; // 5-15 enemies
+      enemies = [];
+      for (let i = 0; i < count; i++) {
+        enemies.push(randomEmptyPosition());
+      }
+    }
+
     // --- Player State ---
-    let player = {
-      x: 1.5, // grid units (center of open space)
-      y: 1.5,
-      dir: 0, // radians, 0 = right
-      speed: 0.2, // match test speed
-      rotSpeed: 0.07,
-    };
+    let player;
+    function resetPlayer() {
+      player = {
+        x: 1.5, // grid units (center of open space)
+        y: 1.5,
+        dir: 0, // radians, 0 = right
+        speed: 0.2, // match test speed
+        rotSpeed: 0.07,
+      };
+    }
 
     // --- Input State ---
     const keys = { ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false, w: false, a: false, s: false, d: false };
@@ -83,8 +137,12 @@ const html = `
       return map[my]?.[mx] === 1;
     }
 
+    // --- Game State ---
+    let gameOver = false;
+
     // --- Game Loop ---
     function update() {
+      if (gameOver) return;
       // Rotation
       let move = 0;
       if (keys.ArrowLeft || keys.a) player.dir -= player.rotSpeed;
@@ -96,12 +154,30 @@ const html = `
       let dy = Math.sin(player.dir) * player.speed * move;
       const nx = player.x + dx, ny = player.y + dy;
       // Collision
-      if (!isWall(nx, player.y)) player.x = nx;
-      if (!isWall(player.x, ny)) player.y = ny;
-      // Debug output
-      // console.log('Player:', {x: player.x, y: player.y, dir: player.dir.toFixed(2)});
-      // console.log('Move:', move, 'dx:', dx.toFixed(3), 'dy:', dy.toFixed(3));
-      // console.log('isWall(nx, player.y):', isWall(nx, player.y), 'isWall(player.x, ny):', isWall(player.x, ny));
+      let hitWall = false;
+      if (!isWall(nx, player.y)) {
+        player.x = nx;
+      } else if (move !== 0) {
+        hitWall = true;
+      }
+      if (!isWall(player.x, ny)) {
+        player.y = ny;
+      } else if (move !== 0) {
+        hitWall = true;
+      }
+      // Game over if player touches a wall
+      if (hitWall) {
+        triggerGameOver();
+        return;
+      }
+      // Enemy collision
+      for (const enemy of enemies) {
+        const dist = Math.hypot(player.x - enemy.x, player.y - enemy.y);
+        if (dist < 0.4) {
+          triggerGameOver();
+          break;
+        }
+      }
     }
 
     // --- Render ---
@@ -109,22 +185,38 @@ const html = `
     const ctx = canvas.getContext('2d');
     function render() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      // Draw map
-      for (let y = 0; y < MAP_H; y++) {
-        for (let x = 0; x < MAP_W; x++) {
-          ctx.fillStyle = map[y][x] === 1 ? '#800000' : '#ddd'; // dark red for walls, light grey for walkable
-          ctx.fillRect(x * TILE, y * TILE, TILE, TILE);
+      // Draw map (only visible portion for performance)
+      const viewTilesX = Math.ceil(canvas.width / TILE);
+      const viewTilesY = Math.ceil(canvas.height / TILE);
+      const offsetX = Math.max(0, Math.floor(player.x - viewTilesX / 2));
+      const offsetY = Math.max(0, Math.floor(player.y - viewTilesY / 2));
+      for (let y = offsetY; y < Math.min(MAP_H, offsetY + viewTilesY); y++) {
+        for (let x = offsetX; x < Math.min(MAP_W, offsetX + viewTilesX); x++) {
+          ctx.fillStyle = map[y][x] === 1 ? '#800000' : '#ddd';
+          ctx.fillRect((x - offsetX) * TILE, (y - offsetY) * TILE, TILE, TILE);
         }
       }
-      // Draw player
+      // Draw enemies (only those in view)
       ctx.save();
-      ctx.translate(player.x * TILE, player.y * TILE);
+      ctx.fillStyle = '#39f';
+      for (const enemy of enemies) {
+        const ex = (enemy.x - offsetX) * TILE;
+        const ey = (enemy.y - offsetY) * TILE;
+        if (ex >= 0 && ex < canvas.width && ey >= 0 && ey < canvas.height) {
+          ctx.beginPath();
+          ctx.arc(ex, ey, TILE/4, 0, Math.PI*2);
+          ctx.fill();
+        }
+      }
+      ctx.restore();
+      // Draw player (centered)
+      ctx.save();
+      ctx.translate((player.x - offsetX) * TILE, (player.y - offsetY) * TILE);
       ctx.rotate(player.dir);
       ctx.fillStyle = '#0f0';
       ctx.beginPath();
       ctx.arc(0, 0, TILE/4, 0, Math.PI*2);
       ctx.fill();
-      // Draw facing direction
       ctx.strokeStyle = '#0f0';
       ctx.beginPath();
       ctx.moveTo(0, 0);
@@ -142,16 +234,33 @@ const html = `
     function loop() {
       update();
       render();
-      requestAnimationFrame(loop);
+      if (!gameOver) requestAnimationFrame(loop);
     }
 
-    // --- Start Menu Logic ---
+    // --- Game Over Logic ---
     const startMenu = document.getElementById('start-menu');
+    const gameoverMenu = document.getElementById('gameover-menu');
     const startBtn = document.getElementById('start-btn');
-    startBtn.addEventListener('click', () => {
+    const retryBtn = document.getElementById('retry-btn');
+    function triggerGameOver() {
+      gameOver = true;
+      canvas.style.display = 'none';
+      gameoverMenu.style.display = 'flex';
+    }
+    function startGame() {
+      resetPlayer();
+      spawnEnemies();
+      gameOver = false;
+      gameoverMenu.style.display = 'none';
       startMenu.style.display = 'none';
       canvas.style.display = 'block';
       loop();
+    }
+    startBtn.addEventListener('click', startGame);
+    retryBtn.addEventListener('click', () => {
+      startMenu.style.display = 'flex';
+      gameoverMenu.style.display = 'none';
+      canvas.style.display = 'none';
     });
   </script>
 </body>
