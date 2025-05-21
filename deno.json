@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "checkJs": true
+  },
+  "fmt": {
+    "files": {
+      "include": ["**/*.ts", "**/*.js", "**/*.tsx", "**/*.jsx"]
+    },
+    "options": {
+      "indentWidth": 2,
+      "lineWidth": 100,
+      "singleQuote": true
+    }
+  },
+  "tasks": {
+    "dev": "deno run --allow-read --allow-net main.ts",
+    "start": "deno run --allow-read --allow-net main.ts",
+    "test": "deno test --allow-read --allow-net",
+    "bundle": "deno bundle ./src/client.ts ./dist/client.js"
+  }
+}
