@@ -14,21 +14,20 @@ const html = `
   </style>
 </head>
 <body>
-  <canvas id="game" width="640" height="400"></canvas>
+  <canvas id="game" width="1200" height="800"></canvas>
   <script type="module">
     // --- Map Data (1 = wall, 0 = empty) ---
-    const map = [
-      [1,1,1,1,1,1,1,1,1,1],
-      [1,0,0,0,0,0,0,0,0,1],
-      [1,0,1,0,1,1,0,1,0,1],
-      [1,0,1,0,0,0,0,1,0,1],
-      [1,0,1,1,1,1,0,1,0,1],
-      [1,0,0,0,0,0,0,0,0,1],
-      [1,1,1,1,1,1,1,1,1,1],
-    ];
+    // Generate a 1024x1024 map with walls around the border and random internal walls
+    const MAP_W = 1024;
+    const MAP_H = 1024;
+    const map = Array.from({ length: MAP_H }, (_, y) =>
+      Array.from({ length: MAP_W }, (_, x) =>
+        (x === 0 || y === 0 || x === MAP_W - 1 || y === MAP_H - 1)
+          ? 1 // border walls
+          : (Math.random() < 0.08 ? 1 : 0) // sparse random internal walls
+      )
+    );
     const TILE = 40;
-    const MAP_W = map[0].length;
-    const MAP_H = map.length;
 
     // --- Player State ---
     let player = {
@@ -79,7 +78,7 @@ const html = `
       // Draw map
       for (let y = 0; y < MAP_H; y++) {
         for (let x = 0; x < MAP_W; x++) {
-          ctx.fillStyle = map[y][x] === 1 ? '#444' : '#222';
+          ctx.fillStyle = map[y][x] === 1 ? '#800000' : '#ddd'; // dark red for walls, light grey for walkable
           ctx.fillRect(x * TILE, y * TILE, TILE, TILE);
         }
       }
