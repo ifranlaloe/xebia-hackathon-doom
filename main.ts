@@ -11,10 +11,44 @@ const html = `
   <style>
     body { background: #222; color: #fff; margin: 0; overflow: hidden; }
     canvas { display: block; margin: 0 auto; background: #111; }
+    /* Start Menu Overlay Styles */
+    #start-menu {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(20,20,20,0.95);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+    }
+    #start-menu h1 {
+      font-size: 3rem;
+      margin-bottom: 1.5rem;
+      color: #fff;
+      letter-spacing: 0.1em;
+    }
+    #start-menu button {
+      font-size: 1.5rem;
+      padding: 0.75em 2em;
+      border: none;
+      border-radius: 8px;
+      background: #800000;
+      color: #fff;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    #start-menu button:hover {
+      background: #a00;
+    }
   </style>
 </head>
 <body>
-  <canvas id="game" width="1200" height="800"></canvas>
+  <div id="start-menu">
+    <h1>Deno Doom Minimal</h1>
+    <button id="start-btn">Start Game</button>
+  </div>
+  <canvas id="game" width="1200" height="800" style="display:none;"></canvas>
   <script type="module">
     // --- Map Data (1 = wall, 0 = empty) ---
     // Generate a 1024x1024 map with walls around the border and random internal walls
@@ -65,9 +99,9 @@ const html = `
       if (!isWall(nx, player.y)) player.x = nx;
       if (!isWall(player.x, ny)) player.y = ny;
       // Debug output
-      console.log('Player:', {x: player.x, y: player.y, dir: player.dir.toFixed(2)});
-      console.log('Move:', move, 'dx:', dx.toFixed(3), 'dy:', dy.toFixed(3));
-      console.log('isWall(nx, player.y):', isWall(nx, player.y), 'isWall(player.x, ny):', isWall(player.x, ny));
+      // console.log('Player:', {x: player.x, y: player.y, dir: player.dir.toFixed(2)});
+      // console.log('Move:', move, 'dx:', dx.toFixed(3), 'dy:', dy.toFixed(3));
+      // console.log('isWall(nx, player.y):', isWall(nx, player.y), 'isWall(player.x, ny):', isWall(player.x, ny));
     }
 
     // --- Render ---
@@ -110,7 +144,15 @@ const html = `
       render();
       requestAnimationFrame(loop);
     }
-    loop();
+
+    // --- Start Menu Logic ---
+    const startMenu = document.getElementById('start-menu');
+    const startBtn = document.getElementById('start-btn');
+    startBtn.addEventListener('click', () => {
+      startMenu.style.display = 'none';
+      canvas.style.display = 'block';
+      loop();
+    });
   </script>
 </body>
 </html>
