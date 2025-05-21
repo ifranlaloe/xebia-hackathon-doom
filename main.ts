@@ -32,10 +32,10 @@ const html = `
 
     // --- Player State ---
     let player = {
-      x: 2.5, // grid units
-      y: 2.5,
+      x: 1.5, // grid units (center of open space)
+      y: 1.5,
       dir: 0, // radians, 0 = right
-      speed: 0.08,
+      speed: 0.2, // match test speed
       rotSpeed: 0.07,
     };
 
@@ -53,22 +53,22 @@ const html = `
     // --- Game Loop ---
     function update() {
       // Rotation
-      let move = 0, strafe = 0;
+      let move = 0;
       if (keys.ArrowLeft || keys.a) player.dir -= player.rotSpeed;
       if (keys.ArrowRight || keys.d) player.dir += player.rotSpeed;
       if (keys.ArrowUp || keys.w) move = 1;
       if (keys.ArrowDown || keys.s) move = -1;
-      // Strafe (Q/E or Shift+Left/Right for future expansion)
-      // let strafe = 0;
-      // if (keys.q) strafe = -1;
-      // if (keys.e) strafe = 1;
       // Movement
       let dx = Math.cos(player.dir) * player.speed * move;
       let dy = Math.sin(player.dir) * player.speed * move;
-      // Collision
       const nx = player.x + dx, ny = player.y + dy;
+      // Collision
       if (!isWall(nx, player.y)) player.x = nx;
       if (!isWall(player.x, ny)) player.y = ny;
+      // Debug output
+      console.log('Player:', {x: player.x, y: player.y, dir: player.dir.toFixed(2)});
+      console.log('Move:', move, 'dx:', dx.toFixed(3), 'dy:', dy.toFixed(3));
+      console.log('isWall(nx, player.y):', isWall(nx, player.y), 'isWall(player.x, ny):', isWall(player.x, ny));
     }
 
     // --- Render ---
@@ -97,6 +97,12 @@ const html = `
       ctx.moveTo(0, 0);
       ctx.lineTo(TILE/2, 0);
       ctx.stroke();
+      ctx.restore();
+      // Draw player coordinates (debug info)
+      ctx.save();
+      ctx.fillStyle = '#fff';
+      ctx.font = '16px monospace';
+      ctx.fillText(\`x: \${player.x.toFixed(2)}, y: \${player.y.toFixed(2)}\`, 10, canvas.height - 20);
       ctx.restore();
     }
 
