@@ -1,0 +1,12 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Run Deno Hello World",
+      "type": "shell",
+      "command": "deno run main.ts",
+      "group": "build",
+      "problemMatcher": []
+    }
+  ]
+}
